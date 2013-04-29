@@ -5,10 +5,11 @@
  * ID + token have been issued by ourselves and has not been altered.
  * 
  * For this use case, the ID is obfuscated and prepended with a cryptographic
- * HMAC. As a result, the tokenized ID can be used as an access token, e.g.
- * for giving out links to a user, that shall be granted access to a single
- * resource without any other auth checks, but make it (nearly) impossible
- * for anyone else to guess or construct another valid token.
+ * HMAC (all encoded in the rfc4648 variant of base32). As a result, the
+ * tokenized ID can be used as an access token, e.g. for giving out links to
+ * a user, that shall be granted access to a single resource without any
+ * other auth checks, but make it (nearly) impossible for anyone else to
+ * guess or construct another valid token.
  * 
  * The HMAC can be truncated to generate shorter tokenized IDs, e.g. to
  * allow for easier manual type in by a user (f.e. printed out codes). The
@@ -58,7 +59,7 @@ class IdTokenizer {
     private $hmacLenHex = 0;
     
     /**
-     * @var integer Length of the HMAX in Base32 encoding
+     * @var integer Length of the HMAC in Base32 encoding
      */
     private $hmacLenBase32 = 0;
     
@@ -165,6 +166,14 @@ class IdTokenizer {
      * @return id The given id if valid, else 0
      */
     public function decode($code) {
+		// check if we got a valid formatted code (else base_convert errors might arise)
+		if (!preg_match('/^[01234567890abcdefghijklmnopqrstuv]{2,}$/i', $code)) {
+//            if (PHP_SAPI === 'cli') {
+//                echo "invalid input data detected!\n";
+//            }			
+			return 0;
+		}
+		
         $idEnc = substr($code, $this->hmacLenBase32);
         $id = $this->bcBaseConvert($idEnc, 32, 10);
 
@@ -173,7 +182,8 @@ class IdTokenizer {
         $hmacUser = str_pad($hmacTrunc, $this->hmacLenHex, '0', STR_PAD_LEFT);
         $hmacData = $this->getHmac($id);
 
-        // Compare MD5 hashes to prevent timing attacks
+        // Check HMAC validity and thus message integrity
+		// (compares MD5 hashes to prevent timing attacks)
         if (md5($hmacData) !== md5($hmacUser)) {
 //            if (PHP_SAPI === 'cli') {
 //                echo "tampered data detected!\n";

@@ -43,129 +43,128 @@
  */
 class IdTokenizer {
 
-    /**
-     * @var string Hashing algoorithm to use
-     */
-    private $hashFn = 'sha256';
+	/**
+	 * @var string Hashing algoorithm to use
+	 */
+	private $hashFn = 'sha256';
 
-    /**
-     * @var integer Length of truncated HMAC in bits 
-     */
-    private $hmacLen = 0;
+	/**
+	 * @var integer Length of truncated HMAC in bits 
+	 */
+	private $hmacLen = 0;
 
-    /**
-     * @var integer Length of the HMAC in Hex encoding
-     */
-    private $hmacLenHex = 0;
-    
-    /**
-     * @var integer Length of the HMAC in Base32 encoding
-     */
-    private $hmacLenBase32 = 0;
-    
-    /**
-     * @var mixed The key to use for HMAC creation and verification
-     */
-    private $key = null;
-    
-    
-    /**
-     * Creates a new ID obfuscator.
-     * 
-     * @param string $password A password to generate a key from
-     * @param string $salt The salt to use for key creation
-     * @param integer $hmacLen Length of the HMAC, defaults to 64 bits
-     */
-    public function __construct($password, $salt, $hmacLen = 64) {
-        $this->key = $this->genKey($password, $salt);
-        $this->hmacLen = $hmacLen;
-        $this->hmacLenHex = ceil($hmacLen / 4);
-        $this->hmacLenBase32 = ceil($hmacLen / 5);
-    }
+	/**
+	 * @var integer Length of the HMAC in Hex encoding
+	 */
+	private $hmacLenHex = 0;
 
-    /**
-     * Abbreviated PBKDF2 function to create a HMAC key (we only need a
-     * single block here, and paremeters are fixed).
-     * 
-     * @link https://defuse.ca/php-pbkdf2.htm
-     */
-    private function genKey($password, $salt) {
-        $algorithm = 'sha256';
-        $count = 1000;
+	/**
+	 * @var integer Length of the HMAC in Base32 encoding
+	 */
+	private $hmacLenBase32 = 0;
 
-        $last = $salt . pack("N", 1);
-        $last = $xorsum = hash_hmac($algorithm, $last, $password, true);
-        for ($j = 1; $j < $count; $j++) {
-            $xorsum ^= ($last = hash_hmac($algorithm, $last, $password, true));
-        }
+	/**
+	 * @var mixed The key to use for HMAC creation and verification
+	 */
+	private $key = null;
 
-        return $xorsum;
-    }
+	/**
+	 * Creates a new ID obfuscator.
+	 * 
+	 * @param string $password A password to generate a key from
+	 * @param string $salt The salt to use for key creation
+	 * @param integer $hmacLen Length of the HMAC, defaults to 64 bits
+	 */
+	public function __construct($password, $salt, $hmacLen = 64) {
+		$this->key = $this->genKey($password, $salt);
+		$this->hmacLen = $hmacLen;
+		$this->hmacLenHex = ceil($hmacLen / 4);
+		$this->hmacLenBase32 = ceil($hmacLen / 5);
+	}
 
-    /**
-     * Base convert alternative for big integers, that works with
-     * integers of any size and up to base 62.
-     * 
-     * Assembled from the information in the following thread:
-     * @link http://stackoverflow.com/questions/1938029/php-how-to-base-convert-up-to-base-62
-     * 
-     * @param string $numstring number to convert
-     * @param integer $frombase The base the number is encoded in
-     * @param integer $tobase The base the number willbe converted to
-     * @return string The converted number
-     */
-    public function bcBaseConvert($numstring, $frombase, $tobase) {
-        $alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	/**
+	 * Abbreviated PBKDF2 function to create a HMAC key (we only need a
+	 * single block here, and paremeters are fixed).
+	 * 
+	 * @link https://defuse.ca/php-pbkdf2.htm
+	 */
+	private function genKey($password, $salt) {
+		$algorithm = 'sha256';
+		$count = 1000;
 
-        $chars = substr($alphabet, 0, $frombase);
-        $tostring = substr($alphabet, 0, $tobase);
+		$last = $salt . pack("N", 1);
+		$last = $xorsum = hash_hmac($algorithm, $last, $password, true);
+		for ($j = 1; $j < $count; $j++) {
+			$xorsum ^= ($last = hash_hmac($algorithm, $last, $password, true));
+		}
 
-        $numstring = (string) $numstring;
-        $length = strlen($numstring);
-        $result = '';
-        for ($i = 0; $i < $length; $i++) {
-            $number[$i] = strpos($chars, $numstring{$i});
-        }
-        do {
-            $divide = 0;
-            $newlen = 0;
-            for ($i = 0; $i < $length; $i++) {
-                $divide = $divide * $frombase + $number[$i];
-                if ($divide >= $tobase) {
-                    $number[$newlen++] = (int) ($divide / $tobase);
-                    $divide = $divide % $tobase;
-                } elseif ($newlen > 0) {
-                    $number[$newlen++] = 0;
-                }
-            }
-            $length = $newlen;
-            $result = $tostring{$divide} . $result;
-        } while ($newlen != 0);
-        return $result;
-    }
+		return $xorsum;
+	}
 
-    /**
-     * Encodes / Obfuscates an ID in crockford base32 encoding and prepends it
-     * with a message HMAC of the defined size.
-     * 
-     * @param integer $id The id to encode
-     * @return string base36 encoded HMAC + id
-     */
-    public function encode($id) {
-        $idEnc = $this->bcBaseConvert($id, 10, 32);
-        $hmac = $this->getHmac($id);
-        $hmacEnc = $this->bcBaseConvert($hmac, 16, 32);
-        return str_pad($hmacEnc, $this->hmacLenBase32, '0', STR_PAD_LEFT) . $idEnc;
-    }
+	/**
+	 * Base convert alternative for big integers, that works with
+	 * integers of any size and up to base 62.
+	 * 
+	 * Assembled from the information in the following thread:
+	 * @link http://stackoverflow.com/questions/1938029/php-how-to-base-convert-up-to-base-62
+	 * 
+	 * @param string $numstring number to convert
+	 * @param integer $frombase The base the number is encoded in
+	 * @param integer $tobase The base the number willbe converted to
+	 * @return string The converted number
+	 */
+	public function bcBaseConvert($numstring, $frombase, $tobase) {
+		$alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-    /**
-     * Decodes / De-Obfuscates an ID in crockford base32 encoding and verifies the
-     * integrity with the given HMAC.
-     * 
-     * @param string $code The code to encode
-     * @return id The given id if valid, else 0
-     */
-    public function decode($code) {
+		$chars = substr($alphabet, 0, $frombase);
+		$tostring = substr($alphabet, 0, $tobase);
+
+		$numstring = (string) $numstring;
+		$length = strlen($numstring);
+		$result = '';
+		for ($i = 0; $i < $length; $i++) {
+			$number[$i] = strpos($chars, $numstring{$i});
+		}
+		do {
+			$divide = 0;
+			$newlen = 0;
+			for ($i = 0; $i < $length; $i++) {
+				$divide = $divide * $frombase + $number[$i];
+				if ($divide >= $tobase) {
+					$number[$newlen++] = (int) ($divide / $tobase);
+					$divide = $divide % $tobase;
+				} elseif ($newlen > 0) {
+					$number[$newlen++] = 0;
+				}
+			}
+			$length = $newlen;
+			$result = $tostring{$divide} . $result;
+		} while ($newlen != 0);
+		return $result;
+	}
+
+	/**
+	 * Encodes / Obfuscates an ID in crockford base32 encoding and prepends it
+	 * with a message HMAC of the defined size.
+	 * 
+	 * @param integer $id The id to encode
+	 * @return string base36 encoded HMAC + id
+	 */
+	public function encode($id) {
+		$idEnc = $this->bcBaseConvert($id, 10, 32);
+		$hmac = $this->getHmac($id);
+		$hmacEnc = $this->bcBaseConvert($hmac, 16, 32);
+		return str_pad($hmacEnc, $this->hmacLenBase32, '0', STR_PAD_LEFT) . $idEnc;
+	}
+
+	/**
+	 * Decodes / De-Obfuscates an ID in crockford base32 encoding and verifies the
+	 * integrity with the given HMAC.
+	 * 
+	 * @param string $code The code to encode
+	 * @return id The given id if valid, else 0
+	 */
+	public function decode($code) {
 		// check if we got a valid formatted code (else base_convert errors might arise)
 		if (!preg_match('/^[01234567890abcdefghijklmnopqrstuv]{2,}$/i', $code)) {
 //            if (PHP_SAPI === 'cli') {
@@ -173,39 +172,39 @@ class IdTokenizer {
 //            }			
 			return 0;
 		}
-		
-        $idEnc = substr($code, $this->hmacLenBase32);
-        $id = $this->bcBaseConvert($idEnc, 32, 10);
 
-        $hmacEnc = substr($code, 0, $this->hmacLenBase32);
-        $hmacTrunc = $this->bcBaseConvert($hmacEnc, 32, 16);
-        $hmacUser = str_pad($hmacTrunc, $this->hmacLenHex, '0', STR_PAD_LEFT);
-        $hmacData = $this->getHmac($id);
+		$idEnc = substr($code, $this->hmacLenBase32);
+		$id = $this->bcBaseConvert($idEnc, 32, 10);
 
-        // Check HMAC validity and thus message integrity
+		$hmacEnc = substr($code, 0, $this->hmacLenBase32);
+		$hmacTrunc = $this->bcBaseConvert($hmacEnc, 32, 16);
+		$hmacUser = str_pad($hmacTrunc, $this->hmacLenHex, '0', STR_PAD_LEFT);
+		$hmacData = $this->getHmac($id);
+
+		// Check HMAC validity and thus message integrity
 		// (compares MD5 hashes to prevent timing attacks)
-        if (md5($hmacData) !== md5($hmacUser)) {
+		if (md5($hmacData) !== md5($hmacUser)) {
 //            if (PHP_SAPI === 'cli') {
 //                echo "tampered data detected!\n";
 //            }
-            return 0;
-        }
+			return 0;
+		}
 
-        return $id;
-    }
+		return $id;
+	}
 
-    /**
-     * Creates a HMAC for a message m with key k, truncated to the
-     * number of bits defined in HMAC_LEN. The result is a string with
-     * lowercase hexits.
-     * 
-     * @param string $message The message to create a HMAC for
-     * @return string The (possibly truncated) message HMAC
-     */
-    private function getHmac($message) {
-        $hmac = hash_hmac($this->hashFn, $message, $this->key);
-        $hmac_short = substr($hmac, 0, $this->hmacLenHex);
-        return $hmac_short;
-    }
+	/**
+	 * Creates a HMAC for a message m with key k, truncated to the
+	 * number of bits defined in HMAC_LEN. The result is a string with
+	 * lowercase hexits.
+	 * 
+	 * @param string $message The message to create a HMAC for
+	 * @return string The (possibly truncated) message HMAC
+	 */
+	private function getHmac($message) {
+		$hmac = hash_hmac($this->hashFn, $message, $this->key);
+		$hmac_short = substr($hmac, 0, $this->hmacLenHex);
+		return $hmac_short;
+	}
 
 }

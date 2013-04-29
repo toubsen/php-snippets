@@ -144,7 +144,7 @@ class IdTokenizer {
 	}
 
 	/**
-	 * Encodes / Obfuscates an ID in crockford base32 encoding and prepends it
+	 * Encodes / Obfuscates an ID in base32 encoding and prepends it
 	 * with a message HMAC of the defined size.
 	 * 
 	 * @param integer $id The id to encode
@@ -158,7 +158,7 @@ class IdTokenizer {
 	}
 
 	/**
-	 * Decodes / De-Obfuscates an ID in crockford base32 encoding and verifies the
+	 * Decodes / De-Obfuscates an ID in base32 encoding and verifies the
 	 * integrity with the given HMAC.
 	 * 
 	 * @param string $code The code to encode

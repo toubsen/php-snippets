@@ -11,8 +11,7 @@ function patch_function($oldFunc, $newFunc, $prefix = 'original') {
     $refFunc = new ReflectionFunction($newFunc);
 
     if ($refFunc->getNumberOfParameters() > 0) {
-        $params = array();
-        $callParams = array();
+        $params = $callParams = array();
         $refParams = $refFunc->getParameters();
         foreach ($refParams as $refParam) {
             $param = ($refParam->isPassedByReference() ? '&' : '') . '$' . $refParam->name;
@@ -43,9 +42,9 @@ function patch_function($oldFunc, $newFunc, $prefix = 'original') {
     runkit_function_add($oldFunc, $funcSig, $overrideCode);
 }
 
-patch_function('phpinfo', function($what = INFO_ALL) {
-    echo "I'm in your functions!\n";
+patch_function('phpinfo', function($what = INFO_LICENSE) {
+    echo "Default output changed! :-)\n";
     return original_phpinfo($what);
 });
 
-phpinfo(INFO_LICENSE);
+phpinfo();
